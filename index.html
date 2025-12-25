@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Конструктор столу</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Створи свій стіл</h1>
+
+<div class="container">
+  <div id="controls">
+    <label>
+      Довжина (см)
+      <input type="range" id="length" min="120" max="220" value="160">
+    </label>
+
+    <label>
+      Ширина (см)
+      <input type="range" id="width" min="70" max="100" value="80">
+    </label>
+
+    <label>
+      Колір металу
+      <select id="metalColor">
+        <option value="#111111">Чорний</option>
+        <option value="#555555">Графіт</option>
+        <option value="#999999">Сірий</option>
+      </select>
+    </label>
+
+    <button id="orderBtn">Замовити</button>
+  </div>
+
+  <div id="scene"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
