@@ -141,6 +141,18 @@ input[type=number], select { width: 100%; background: var(--bg); border: 1px sol
 .chip { width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); cursor: pointer; padding: 0; }
 .depthlegend { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 10px; width: 190px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; z-index: 3; }
 .depthlegend small { font-family: var(--f-display); font-weight: 600; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.hud { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 10px; z-index: 4; display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
+.depthlegend:not([hidden]) ~ .hud { bottom: 64px; }
+.hud button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--ink); cursor: pointer; padding: 7px 12px; font-family: var(--f-display); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.hud button + button { border-left: 1px solid var(--line); }
+.hud button:hover:not(:disabled) { background: var(--bg); }
+.hud button:disabled { color: var(--muted); opacity: .45; cursor: default; }
+.hud svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (pointer: coarse) { .hud button { padding: 10px 14px; } }
+@media (max-width: 860px) {
+  .hud, .depthlegend:not([hidden]) ~ .hud { position: fixed; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 2px 10px rgba(0, 0, 0, .22); }
+  body #toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+}
 .legend { position: absolute; bottom: 8px; left: max(12px, env(safe-area-inset-left, 0px)); display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
 .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 4px; }
 #toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 4px; font-size: 13px; max-width: min(92vw, 520px); z-index: 20; pointer-events: none; }
@@ -306,6 +318,10 @@ button, input, select, textarea, label { touch-action: manipulation; }
       </div>
       <div id="three" hidden></div>
       <div class="depthlegend" id="depthLegend" hidden><small>Profundidad</small><div class="palbar" id="dlBar"></div><div class="pallbl"><span id="dlLo"></span><span id="dlHi"></span></div></div>
+      <div class="hud" id="hud">
+        <button id="hudUndo" type="button" title="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Atrás</span></button>
+        <button id="hudRedo" type="button" title="Rehacer (Ctrl+Shift+Z)" aria-label="Rehacer" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      </div>
     </div>
   </section>
 </div>
@@ -1784,6 +1800,13 @@ function makeZip(files) { // files: [{name, data: Uint8Array}]
 
 // ================== INTERFAZ ==================
 const UK = {
+ "Atrás": "Назад",
+ "Deshacer (Ctrl+Z)": "Назад (Ctrl+Z)",
+ "Rehacer": "Вперед",
+ "Rehacer (Ctrl+Shift+Z)": "Вперед (Ctrl+Shift+Z)",
+ "No hay nada que rehacer": "Немає що повертати",
+ "Atrás: paso deshecho": "Назад: крок скасовано",
+ "Adelante: paso rehecho": "Вперед: крок повернуто",
  "  1. hoja_NN_grabado.nc con fresa en V (numeros de pieza).": "  1. hoja_NN_grabado.nc V-подібною фрезою (номери деталей).",
  "  Las pestanas estan en el canto trasero (contra la pared).": "  Перемички на задньому краї (до стіни).",
  "  {0}. hoja_NN_corte.nc con la fresa D{1}.": "  {0}. hoja_NN_corte.nc фрезою D{1}.",
@@ -2754,7 +2777,58 @@ function buildForm() {
     }
 }
 
-function saveParams() { try { localStorage.setItem('lamas-cnc-params', JSON.stringify(p)); } catch (e) { } }
+function saveParams() { try { localStorage.setItem('lamas-cnc-params', JSON.stringify(p)); } catch (e) { } histNote(); }
+
+// ---------- Historial (Atrás / Adelante) ----------
+// Cada cambio del proyecto (parámetros, modelo cargado, retoques) es un paso; los cambios seguidos se agrupan.
+const HIST_SKIP = new Set(['brushSize', 'brushStr', 'brushTool']);
+const hist = { undo: [], redo: [], cur: null, t: 0, busy: false };
+function histKey() { const q = {}; for (const k in p) if (!HIST_SKIP.has(k)) q[k] = p[k]; return JSON.stringify(q); }
+function histNote() { if (hist.busy) return; clearTimeout(hist.t); hist.t = setTimeout(histCommit, 450); }
+function histCommit() {
+    clearTimeout(hist.t);
+    const key = histKey(), c = hist.cur;
+    if (c && c.key === key && c.ev === editsVer && c.imgSrc === imgSrc && c.stlMesh === stlMesh) return;
+    const s = {
+        key, p: JSON.parse(JSON.stringify(p)), ev: editsVer, img, imgSrc, stlMesh,
+        edits: !edits ? null : (c && c.ev === editsVer && c.edits) ? c.edits : { w: edits.w, h: edits.h, data: edits.data.slice() }
+    };
+    if (c) { hist.undo.push(c); if (hist.undo.length > 60) hist.undo.shift(); hist.redo.length = 0; }
+    hist.cur = s;
+    histUI();
+}
+function histGo(dir) {
+    if (hist.busy) return;
+    histCommit();
+    const from = dir < 0 ? hist.undo : hist.redo, to = dir < 0 ? hist.redo : hist.undo;
+    if (!from.length) { toast(tr(dir < 0 ? 'No hay nada que deshacer' : 'No hay nada que rehacer')); return; }
+    const s = from.pop();
+    to.push(hist.cur);
+    hist.busy = true;
+    try {
+        const old = p, oldStl = stlMesh, oldSrc = imgSrc;
+        p = JSON.parse(JSON.stringify(s.p));
+        for (const k of HIST_SKIP) p[k] = old[k];
+        stlMesh = s.stlMesh; imgSrc = s.imgSrc; img = s.img;
+        edits = s.edits ? { w: s.edits.w, h: s.edits.h, data: s.edits.data.slice() } : null;
+        editsVer++; s.ev = editsVer;
+        syncForm();
+        if (stlMesh && (stlMesh !== oldStl || old.stlAxis !== p.stlAxis || old.stlBack !== p.stlBack)) rasterizeSTL();
+        else if (!stlMesh && imgSrc && (imgSrc !== oldSrc || old.imgRead !== p.imgRead)) decodeImage();
+        else if (!img) setImgStatus('', false);
+        showAspectBtn();
+        if (three) updateLights();
+        regenerate();
+    } finally { hist.busy = false; }
+    hist.cur = s;
+    histUI();
+    toast(tr(dir < 0 ? 'Atrás: paso deshecho' : 'Adelante: paso rehecho'));
+}
+function histUI() {
+    const u = $('hudUndo'), r = $('hudRedo');
+    if (u) u.disabled = !hist.undo.length;
+    if (r) r.disabled = !hist.redo.length;
+}
 function renderTips() { $('tipsList').innerHTML = TIPS.map(([t, d]) => `<li><b>${tr(t)}.</b> ${tr(d)}</li>`).join(''); }
 function onFieldChange(id) {
     if (VIEW_KEYS.has(id)) {
@@ -4429,6 +4503,15 @@ function boot() {
         const sw = e.target.closest('[data-sw]'), chip = e.target.closest('[data-chip]');
         if (sw) { p[sw.dataset.sw] = sw.dataset.v; syncForm(); onFieldChange(sw.dataset.sw); }
         if (chip) { p[chip.dataset.chip] = chip.dataset.v; $('f_' + chip.dataset.chip).value = chip.dataset.v; onFieldChange(chip.dataset.chip); }
+    });
+    $('hudUndo').onclick = () => histGo(-1);
+    $('hudRedo').onclick = () => histGo(1);
+    document.addEventListener('keydown', e => {
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+        if (e.target.closest && e.target.closest('input[type=text], input[type=number], textarea')) return;
+        const k = e.key.toLowerCase();
+        if (k === 'z') { e.preventDefault(); histGo(e.shiftKey ? 1 : -1); }
+        else if (k === 'y') { e.preventDefault(); histGo(1); }
     });
     $('imageInput').addEventListener('change', e => { loadImageFile(e.target.files && e.target.files[0]); e.target.value = ''; });
     window.addEventListener('dragover', e => e.preventDefault());
