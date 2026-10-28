@@ -2654,7 +2654,7 @@ function fieldRow(f) {
     row.dataset.f = f.id;
     if (f.type === 'image') {
         row.innerHTML = `<div class="drop" id="dropBox"><label class="btn ghost" for="imageInput">Abrir modelo: foto, PNG, SVG o STL</label>
-            <input type="file" id="imageInput" accept="image/*,.png,.jpg,.jpeg,.webp,.svg,image/svg+xml,.stl,model/stl,application/sla" hidden>
+            <input type="file" id="imageInput"${IS_IOS ? '' : ' accept="image/*,.png,.jpg,.jpeg,.webp,.svg,image/svg+xml,.stl,model/stl,application/sla"'} hidden>
             <span class="muted small">o arrástralo aquí. Foto/PNG: claro = sale. SVG: el dibujo sale. STL: lo más alto del modelo sale.</span>
             <button class="btn ghost small" id="btnAspect" type="button" hidden>Ajustar alto del panel a la proporción</button>
             <button class="btn ghost small" id="btnModelSize" type="button" hidden>Panel a tamaño del modelo</button>
