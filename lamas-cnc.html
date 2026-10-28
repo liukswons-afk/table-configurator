@@ -285,7 +285,7 @@ button, input, select, textarea, label { touch-action: manipulation; }
       <div class="btns">
         <button class="btn ghost" id="btnProject" type="button">Guardar proyecto (.json)</button>
         <label class="btn ghost" for="projectInput">Abrir proyecto</label>
-        <input type="file" id="projectInput" accept=".json,application/json" hidden>
+        <input type="file" id="projectInput" accept=".json,application/json,.zip,application/zip" hidden>
       </div>
       <p class="hint">Simula siempre el G-code en tu control o CAM antes del primer corte: cero, diámetro de fresa y pestañas.</p>
     </section>
@@ -2855,6 +2855,11 @@ function makeZip(files) { // files: [{name, data: Uint8Array}]
 
 // ================== INTERFAZ ==================
 const UK = {
+ "no es un ZIP válido": "це не ZIP-архів",
+ "compresión no compatible": "непідтримуване стиснення",
+ "Abriendo ZIP…": "Відкриваю ZIP…",
+ "Proyecto abierto desde «{0}»": "Проєкт відкрито з «{0}»",
+ "En «{0}» no hay STL, imagen ni proyecto.": "У «{0}» немає STL, зображення чи проєкту.",
  "Atrás": "Назад",
  "Deshacer (Ctrl+Z)": "Назад (Ctrl+Z)",
  "Rehacer": "Вперед",
@@ -3732,7 +3737,7 @@ function fieldRow(f) {
     row.dataset.f = f.id;
     if (f.type === 'image') {
         row.innerHTML = `<div class="drop" id="dropBox"><label class="btn ghost" for="imageInput">Abrir modelo: foto, PNG, SVG o STL</label>
-            <input type="file" id="imageInput"${IS_IOS ? '' : ' accept="image/*,.png,.jpg,.jpeg,.webp,.svg,image/svg+xml,.stl,model/stl,application/sla"'} hidden>
+            <input type="file" id="imageInput"${IS_IOS ? '' : ' accept="image/*,.png,.jpg,.jpeg,.webp,.svg,image/svg+xml,.stl,model/stl,application/sla,.zip,application/zip"'} hidden>
             <span class="muted small">o arrástralo aquí. Foto/PNG: claro = sale. SVG: el dibujo sale. STL: lo más alto del modelo sale.</span>
             <button class="btn ghost small" id="btnAspect" type="button" hidden>Ajustar alto del panel a la proporción</button>
             <button class="btn ghost small" id="btnModelSize" type="button" hidden>Panel a tamaño del modelo</button>
@@ -4439,7 +4444,7 @@ async function exportSheet() {
 async function exportSTL() {
     const stl = buildSTL();
     if (!stl) { toast(tr('La vista 3D no está disponible en este navegador.'), true); return; }
-    await saveFile(`${baseName()}_3d.zip`, new Blob([makeZip([{ name: 'panel_3d.stl', data: stl }])], { type: 'application/zip' }));
+    await saveFile(`${baseName()}_3d.zip`, new Blob([makeZip([{ name: 'panel_3d.stl', data: stl }, { name: 'proyecto.json', data: enc(projectJSON()) }])], { type: 'application/zip' }));
 }
 function projectJSON() {
     const out = { app: 'lamas-cnc', version: 1, params: p };
@@ -4457,6 +4462,48 @@ function projectJSON() {
     }
     return JSON.stringify(out);
 }
+// ---------- Abrir ZIP (los que exporta esta app u otros) ----------
+async function readZip(buf) {
+    const u8 = new Uint8Array(buf), dv = new DataView(buf);
+    let e = -1;
+    for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+    if (e < 0) throw new Error(tr('no es un ZIP válido'));
+    const n = dv.getUint16(e + 10, true), out = [];
+    let c = dv.getUint32(e + 16, true);
+    for (let k = 0; k < n; k++) {
+        if (dv.getUint32(c, true) !== 0x02014b50) break;
+        const method = dv.getUint16(c + 10, true), size = dv.getUint32(c + 20, true);
+        const nl = dv.getUint16(c + 28, true), xl = dv.getUint16(c + 30, true), cl = dv.getUint16(c + 32, true), off = dv.getUint32(c + 42, true);
+        const name = new TextDecoder().decode(u8.subarray(c + 46, c + 46 + nl));
+        c += 46 + nl + xl + cl;
+        if (name.endsWith('/') || /(^|\/)(__MACOSX\/|\._)/.test(name)) continue;
+        const start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+        out.push({ name, method, raw: u8.subarray(start, start + size) });
+    }
+    return out;
+}
+async function unzipEntry(f) {
+    if (f.method === 0) return f.raw;
+    if (f.method !== 8 || typeof DecompressionStream === 'undefined') throw new Error(tr('compresión no compatible'));
+    const ds = new Blob([f.raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(ds).arrayBuffer());
+}
+async function openZip(file) {
+    setImgStatus(tr('Abriendo ZIP…'), false);
+    try {
+        const list = await readZip(await file.arrayBuffer());
+        const proj = list.find(f => /\.json$/i.test(f.name));
+        const stl = list.find(f => /\.stl$/i.test(f.name));
+        const pic = list.find(f => /\.(png|jpe?g|webp|svgz?)$/i.test(f.name));
+        if (proj) { loadProject(new TextDecoder().decode(await unzipEntry(proj))); setImgStatus(tr('Proyecto abierto desde «{0}»', file.name), false); return; }
+        const f = stl || pic;
+        if (!f) { setImgStatus(tr('En «{0}» no hay STL, imagen ni proyecto.', file.name), true); return; }
+        const data = await unzipEntry(f);
+        const type = /\.svgz?$/i.test(f.name) ? 'image/svg+xml' : /\.png$/i.test(f.name) ? 'image/png' : /\.jpe?g$/i.test(f.name) ? 'image/jpeg' : /\.webp$/i.test(f.name) ? 'image/webp' : '';
+        return loadImageFile(new File([data], f.name.split('/').pop(), { type }));
+    } catch (e) { setImgStatus(tr('No se pudo abrir «{0}»: {1}', file.name, e.message), true); }
+}
+function isZipFile(file) { return /\.zip$/i.test(file.name || '') || /zip/i.test(file.type || ''); }
 function loadProject(text) {
     try {
         const j = JSON.parse(text);
@@ -4667,6 +4714,7 @@ async function loadSVGFile(file) {
 }
 async function loadImageFile(file) {
     if (!file) return;
+    if (isZipFile(file)) return openZip(file);
     if (/\.stl$/i.test(file.name || '') || /stl|sla/i.test(file.type || '')) return loadSTLFile(file);
     stlMesh = null;
     if (p.mode !== 'imagen') { p.mode = 'imagen'; syncForm(); }
@@ -5544,7 +5592,7 @@ function boot() {
     $('btnSheet').onclick = exportSheet;
     $('btnSTL').onclick = exportSTL;
     $('btnProject').onclick = () => saveFile(`${baseName()}.json`, projectJSON());
-    $('projectInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) f.text().then(loadProject); e.target.value = ''; });
+    $('projectInput').addEventListener('change', e => { const f = e.target.files[0]; if (f) { if (isZipFile(f)) openZip(f); else f.text().then(loadProject); } e.target.value = ''; });
     $('btnReset').onclick = () => { p = { ...DEFAULTS }; img = null; stlMesh = null; imgSrc = null; edits = null; editsVer++; undoStack.length = 0; showAspectBtn(); syncForm(); schedule(); toast(tr('Valores de fábrica')); };
     $('btnAspect').onclick = fitAspect;
     $('btnModelSize').onclick = fitModelSize;
