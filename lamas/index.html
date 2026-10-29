@@ -3730,7 +3730,7 @@ async function loadSTLFile(file) {
         if (img) curModel = file;
         const sl = stlMesh && stlMesh.slats;
         if (LIB.restoring) { /* al abrir de «Mis modelos» manda el proyecto guardado */ }
-        else if (!sl && img && stlMesh.size) { p.modelScale = 1; fitModelSize(); }
+        else if (!sl && img && stlMesh.size) { p.modelScale = autoModelScale(stlMesh.size); fitModelSize(); }
         else if (sl && img && stlMesh.size) {
             const [w, h, d] = stlMesh.size, full = sl.ext[stlMesh.proj.d];
             p.width = clamp(Math.round(w), 300, 8000);
@@ -3748,6 +3748,15 @@ async function loadSTLFile(file) {
 function showAspectBtn() {
     const b = $('btnAspect'); if (b) b.hidden = !img;
     const m = $('btnModelSize'); if (m) m.hidden = !(stlMesh && stlMesh.size);
+}
+// Escala al abrir un STL: medidas reales si caben en un panel; si es una figura pequeña (o enorme),
+// se escala manteniendo las proporciones hasta un panel estándar de 3000 × 2400 mm
+function autoModelScale([w, h]) {
+    let k = 1;
+    if (w < 300 || h < 200) k = Math.min(3000 / w, 2400 / h);
+    else if (w > 8000 || h > 3000) k = Math.min(8000 / w, 3000 / h);
+    if (k === 1) return 1;
+    return clamp(Math.floor(k / 0.05) * 0.05, 0.05, 40);
 }
 // Panel a tamaño real del modelo (STL en mm) × escala
 function fitModelSize() {
