@@ -206,15 +206,55 @@ button, input, select, textarea, label { touch-action: manipulation; }
   .stat b { font-size: 16px; } .stat.main b { font-size: 19px; }
   #sheetWrap { padding-top: 86px; }
 }
+.homebtn svg, .savebtn svg, .hact svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.top h1 { align-self: center; }
+.homebtn, .savebtn { align-self: center; }
+.savebtn { position: relative; }
+.savebtn.dirty::after { content: ""; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--path); border: 2px solid var(--bg); }
+#toast { z-index: 60; }
+body.homeopen { overflow: hidden; }
+.home { position: fixed; inset: 0; z-index: 50; overflow: auto; background: var(--bg); color: var(--ink); -webkit-overflow-scrolling: touch; }
+.home[hidden] { display: none; }
+.homein { max-width: 1080px; margin: 0 auto; padding: calc(18px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(40px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.homehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.homehead h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; }
+.homehead h1 span { color: var(--accent); }
+.homeacts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.hact { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 2px; align-items: center; text-align: left; padding: 16px; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; }
+.hact svg { grid-row: span 2; width: 28px; height: 28px; padding: 8px; border-radius: 50%; background: var(--bg); box-sizing: content-box; }
+.hact b { font-family: var(--f-display); font-size: 19px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.hact span { font-size: 13px; color: var(--muted); }
+.hact.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.hact.primary span { color: inherit; opacity: .85; }
+.hact.primary svg { background: rgba(255, 255, 255, .18); }
+.hact:hover { filter: brightness(1.04); }
+.homemsg { padding: 10px 12px; border-radius: 4px; background: var(--panel); border: 1px solid var(--line); }
+.homemsg.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+.homesub { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 22px 0 10px; }
+.homesub h2 { margin: 0; font-family: var(--f-display); font-weight: 600; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.mcard { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); overflow: hidden; }
+.mcard.cur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.mthumb { display: block; padding: 0; border: 0; background: #2e3430; aspect-ratio: 3 / 2; cursor: pointer; }
+.mthumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mbody { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px 12px; min-width: 0; }
+.mname { font-weight: 600; font-size: 15px; overflow-wrap: anywhere; }
+.mrename { font: inherit; font-weight: 600; padding: 4px 6px; border: 1px solid var(--accent); border-radius: 4px; background: var(--bg); color: var(--ink); }
+.mmeta { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.mbtns { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.mask { font-size: 13px; flex-basis: 100%; }
+.btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } .field.flash { animation: none; } }
 </style>
 
 <div class="app">
   <header class="top">
+    <button class="btn ghost small homebtn" id="btnHome" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v11h14V9"/></svg><span>Mis modelos</span></button>
     <h1>Lamas <span>CNC</span></h1>
     <span class="tag">mesa 3000 × 2000 · DXF · G-code · STL</span>
     <span class="spacer"></span>
     <div class="seg lang" id="langSeg" role="group" aria-label="Idioma"><button type="button" data-lang="es">ES</button><button type="button" data-lang="uk">УКР</button></div>
+    <button class="btn small savebtn" id="btnSave" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><path d="M8 21v-7h8v7"/></svg><span>Guardar</span></button>
     <button class="btn ghost small" id="btnReset" type="button">Valores de fábrica</button>
     <div class="iosbar" id="iosTip" hidden><span>En iPhone: toca Compartir y luego «Añadir a pantalla de inicio» para abrirla como app, a pantalla completa y sin conexión.</span><button type="button" id="iosTipClose" aria-label="Cerrar">✕</button></div>
   </header>
@@ -324,6 +364,24 @@ button, input, select, textarea, label { touch-action: manipulation; }
       </div>
     </div>
   </section>
+</div>
+<div class="home" id="home">
+  <div class="homein">
+    <header class="homehead">
+      <h1>Lamas <span>CNC</span></h1>
+      <div class="seg lang" id="homeLang" role="group" aria-label="Idioma"><button type="button" data-lang="es">ES</button><button type="button" data-lang="uk">УКР</button></div>
+    </header>
+    <div class="homeacts">
+      <button class="hact primary" id="homeNew" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><b>Nuevo proyecto</b><span>Empieza con un modelo de ejemplo y ajústalo</span></button>
+      <label class="hact" for="homeFile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg><b>Añadir modelo</b><span>STL, foto, PNG, SVG, ZIP o proyecto .json: se abre con sus medidas</span></label>
+      <input type="file" id="homeFile" hidden>
+    </div>
+    <p class="homemsg" id="homeMsg" hidden></p>
+    <button class="btn ghost small" id="homeBack" type="button" hidden>← Volver al proyecto abierto</button>
+    <div class="homesub"><h2>Mis modelos</h2><span class="hint" id="homeStore"></span></div>
+    <p class="hint" id="homeEmpty" hidden>Todavía no hay modelos. Añade un STL o una foto, o empieza un proyecto nuevo: se guardan aquí solos.</p>
+    <div class="mgrid" id="homeList"></div>
+  </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1800,6 +1858,34 @@ function makeZip(files) { // files: [{name, data: Uint8Array}]
 
 // ================== INTERFAZ ==================
 const UK = {
+ "Mis modelos": "Мої моделі",
+ "Guardar": "Зберегти",
+ "Abrir": "Відкрити",
+ "No": "Ні",
+ "Guardado": "Збережено",
+ "Nuevo proyecto": "Новий проєкт",
+ "Empieza con un modelo de ejemplo y ajústalo": "Почніть із готового візерунка й налаштуйте його",
+ "Añadir modelo": "Додати модель",
+ "STL, foto, PNG, SVG, ZIP o proyecto .json: se abre con sus medidas": "STL, фото, PNG, SVG, ZIP або проєкт .json — відкривається у своїх розмірах",
+ "← Volver al proyecto abierto": "← Повернутися до відкритого проєкту",
+ "Todavía no hay modelos. Añade un STL o una foto, o empieza un proyecto nuevo: se guardan aquí solos.": "Моделей ще немає. Додайте STL чи фото або почніть новий проєкт — вони збережуться тут самі.",
+ "archivo no encontrado": "файл не знайдено",
+ "Hay cambios sin guardar": "Є незбережені зміни",
+ "No hay dónde guardar en este navegador.": "У цьому браузері нема де зберігати.",
+ "Proyecto {0}": "Проєкт {0}",
+ "Guardado en «Mis modelos»: {0}": "Збережено в «Мої моделі»: {0}",
+ "No se pudo guardar: {0}": "Не вдалося зберегти: {0}",
+ "Abriendo «{0}»…": "Відкриваю «{0}»…",
+ "Modelo añadido a «Mis modelos»: {0}": "Модель додано в «Мої моделі»: {0}",
+ "Eliminado: {0}": "Видалено: {0}",
+ "No se pudo eliminar: {0}": "Не вдалося видалити: {0}",
+ "No se pudo leer «Mis modelos»: {0}": "Не вдалося прочитати «Мої моделі»: {0}",
+ "Se guardan en tu cuenta de Claude: solo tú los ves.": "Зберігаються у вашому акаунті Claude — бачите лише ви.",
+ "Se guardan en este navegador.": "Зберігаються в цьому браузері.",
+ "Este navegador no permite guardar modelos.": "Цей браузер не дозволяє зберігати моделі.",
+ "Renombrar": "Перейменувати",
+ "¿Eliminar este modelo?": "Видалити цю модель?",
+ "Sí, eliminar": "Так, видалити",
  "el STL ya es un panel de lamas: se usa el mapa de alturas": "STL вже є панеллю з ламелей: використано карту висот",
  "panel de {0} lamas detectado, huecos rellenados": "розпізнано панель з {0} ламелей, проміжки заповнено",
  "Panel de lamas: {0} × {1} mm, {2} lamas de {3} mm, relieve {4} mm": "Панель з ламелей: {0} × {1} мм, {2} ламелей по {3} мм, рельєф {4} мм",
@@ -2477,7 +2563,7 @@ function setLang(l, silent) {
     I18N.dict = I18N.lang === 'uk' ? UK : {};
     document.documentElement.lang = I18N.lang;
     try { localStorage.setItem('lamas-cnc-lang', I18N.lang); } catch (e) { }
-    document.querySelectorAll('#langSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === I18N.lang ? 'true' : 'false'));
+    document.querySelectorAll('#langSeg button, #homeLang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === I18N.lang ? 'true' : 'false'));
     translateDOM();
     document.querySelectorAll('.autolog').forEach(e => { e.textContent = ''; });
     renderTips();
@@ -2785,7 +2871,7 @@ function buildForm() {
     }
 }
 
-function saveParams() { try { localStorage.setItem('lamas-cnc-params', JSON.stringify(p)); } catch (e) { } histNote(); }
+function saveParams() { try { localStorage.setItem('lamas-cnc-params', JSON.stringify(p)); } catch (e) { } histNote(); if (typeof libNote === 'function') libNote(); }
 
 // ---------- Historial (Atrás / Adelante) ----------
 // Cada cambio del proyecto (parámetros, modelo cargado, retoques) es un paso; los cambios seguidos se agrupan.
@@ -2796,9 +2882,9 @@ function histNote() { if (hist.busy) return; clearTimeout(hist.t); hist.t = setT
 function histCommit() {
     clearTimeout(hist.t);
     const key = histKey(), c = hist.cur;
-    if (c && c.key === key && c.ev === editsVer && c.imgSrc === imgSrc && c.stlMesh === stlMesh) return;
+    if (c && c.key === key && c.ev === editsVer && c.imgSrc === imgSrc && c.stlMesh === stlMesh && c.curModel === curModel) return;
     const s = {
-        key, p: JSON.parse(JSON.stringify(p)), ev: editsVer, img, imgSrc, stlMesh,
+        key, p: JSON.parse(JSON.stringify(p)), ev: editsVer, img, imgSrc, stlMesh, curModel,
         edits: !edits ? null : (c && c.ev === editsVer && c.edits) ? c.edits : { w: edits.w, h: edits.h, data: edits.data.slice() }
     };
     if (c) { hist.undo.push(c); if (hist.undo.length > 60) hist.undo.shift(); hist.redo.length = 0; }
@@ -2817,7 +2903,7 @@ function histGo(dir) {
         const old = p, oldStl = stlMesh, oldSrc = imgSrc;
         p = JSON.parse(JSON.stringify(s.p));
         for (const k of HIST_SKIP) p[k] = old[k];
-        stlMesh = s.stlMesh; imgSrc = s.imgSrc; img = s.img;
+        stlMesh = s.stlMesh; imgSrc = s.imgSrc; img = s.img; curModel = s.curModel;
         edits = s.edits ? { w: s.edits.w, h: s.edits.h, data: s.edits.data.slice() } : null;
         editsVer++; s.ev = editsVer;
         syncForm();
@@ -3452,18 +3538,19 @@ async function openZip(file) {
     } catch (e) { setImgStatus(tr('No se pudo abrir «{0}»: {1}', file.name, e.message), true); }
 }
 function isZipFile(file) { return /\.zip$/i.test(file.name || '') || /zip/i.test(file.type || ''); }
-function loadProject(text) {
+function editsFromJSON(e) {
+    const u8 = b64ToU8(e.b64), i16 = new Int16Array(u8.buffer, 0, u8.length >> 1), data = new Float32Array(i16.length);
+    for (let i = 0; i < i16.length; i++) data[i] = i16[i] / 32767;
+    return { w: e.w, h: e.h, data };
+}
+function loadProject(text, quiet) {
     try {
         const j = JSON.parse(text);
         if (!j.params) throw new Error('sin parámetros');
         p = { ...DEFAULTS, ...j.params };
-        stlMesh = null; imgSrc = null;
+        stlMesh = null; imgSrc = null; curModel = null; img = null;
         edits = null; editsVer++; undoStack.length = 0;
-        if (j.edits) {
-            const u8 = b64ToU8(j.edits.b64), i16 = new Int16Array(u8.buffer, 0, u8.length >> 1), data = new Float32Array(i16.length);
-            for (let i = 0; i < i16.length; i++) data[i] = i16[i] / 32767;
-            edits = { w: j.edits.w, h: j.edits.h, data };
-        }
+        if (j.edits) edits = editsFromJSON(j.edits);
         if (j.heightmap) {
             const bin = atob(j.heightmap.b64), data = new Float32Array(bin.length);
             for (let i = 0; i < bin.length; i++) data[i] = bin.charCodeAt(i) / 255;
@@ -3471,7 +3558,7 @@ function loadProject(text) {
             if (j.heightmap.mask) { const m = b64ToU8(j.heightmap.mask); img.mask = Float32Array.from(m); }
             setImgStatus(tr('Foto del proyecto ({0}×{1})', img.w, img.h), false);
         }
-        syncForm(); schedule(); toast(tr('Proyecto cargado'));
+        showAspectBtn(); syncForm(); schedule(); if (!quiet) toast(tr('Proyecto cargado'));
     } catch (e) { toast(tr('Ese archivo no es un proyecto de esta app.'), true); }
 }
 
@@ -3639,8 +3726,11 @@ async function loadSTLFile(file) {
         if (p.mode !== 'imagen') p.mode = 'imagen';
         syncForm();
         rasterizeSTL();
+        if (img) curModel = file;
         const sl = stlMesh && stlMesh.slats;
-        if (sl && img && stlMesh.size) {
+        if (LIB.restoring) { /* al abrir de «Mis modelos» manda el proyecto guardado */ }
+        else if (!sl && img && stlMesh.size) { p.modelScale = 1; fitModelSize(); }
+        else if (sl && img && stlMesh.size) {
             const [w, h, d] = stlMesh.size, full = sl.ext[stlMesh.proj.d];
             p.width = clamp(Math.round(w), 300, 8000);
             p.height = clamp(Math.round(h), 200, 3000);
@@ -3746,6 +3836,8 @@ async function loadSVGFile(file) {
         imgSrc.w0 = Math.round(w); imgSrc.h0 = Math.round(h); decodeImage();
     } finally { URL.revokeObjectURL(url); }
 }
+// Foto o SVG nuevos: el alto del panel sigue la proporción del dibujo
+function imgLoaded(file) { curModel = file; if (!LIB.restoring && img) fitAspect(); }
 async function loadImageFile(file) {
     if (!file) return;
     if (isZipFile(file)) return openZip(file);
@@ -3755,15 +3847,16 @@ async function loadImageFile(file) {
     setImgStatus(tr('Cargando…'), false);
     const name = file.name || 'foto';
     if (/\.svgz?$/i.test(name) || /svg/i.test(file.type || '')) {
-        try { await loadSVGFile(file); } catch (e) { setImgStatus(tr('No se pudo abrir «{0}»: {1}. Si usa textos o imágenes enlazadas, conviértelos a trazados.', name, e.message), true); }
+        try { await loadSVGFile(file); imgLoaded(file); } catch (e) { setImgStatus(tr('No se pudo abrir «{0}»: {1}. Si usa textos o imágenes enlazadas, conviértelos a trazados.', name, e.message), true); }
         return;
     }
     try {
         if (window.createImageBitmap) {
-            try { const bmp = await createImageBitmap(file); ingestImage(bmp, bmp.width, bmp.height, name); bmp.close && bmp.close(); return; } catch (_) { }
+            try { const bmp = await createImageBitmap(file); ingestImage(bmp, bmp.width, bmp.height, name); bmp.close && bmp.close(); imgLoaded(file); return; } catch (_) { }
         }
         const im = await new Promise((res, rej) => { const r = new FileReader(); r.onerror = rej; r.onload = ev => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = ev.target.result; }; r.readAsDataURL(file); });
         ingestImage(im, im.naturalWidth, im.naturalHeight, name);
+        imgLoaded(file);
     } catch (e) {
         const heic = /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(name);
         setImgStatus(heic ? tr('Las fotos HEIC del iPhone no se abren en el navegador. Guárdala como JPG o PNG.') : tr('No se pudo abrir «{0}». Prueba con JPG, PNG o SVG.', name), true);
@@ -4608,6 +4701,297 @@ function setupIOS() {
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !window.claude) navigator.serviceWorker.register('sw.js').catch(() => { });
 }
 
+// ---------- Mis modelos: menú de inicio y biblioteca ----------
+// Cada entrada guarda el proyecto (parámetros, retoques) y, si lo hay, el modelo original (STL, foto, SVG).
+// En el visor de Claude se guarda en tu cuenta (db + assets); fuera de él, en este navegador (IndexedDB).
+let curModel = null; // el archivo del modelo abierto ahora: File
+const LIB = { mode: 'none', col: null, assets: null, idb: null, items: [], curId: null, savedKey: '', savedModel: null, restoring: false, t: 0, saving: null, ready: null };
+
+function idbOpen() {
+    return new Promise((res, rej) => {
+        const r = indexedDB.open('lamas-cnc', 1);
+        r.onupgradeneeded = () => { r.result.createObjectStore('items', { keyPath: 'id' }); r.result.createObjectStore('blobs'); };
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    });
+}
+function idbDo(store, mode, fn) {
+    return new Promise((res, rej) => {
+        const tx = LIB.idb.transaction(store, mode), q = fn(tx.objectStore(store));
+        tx.oncomplete = () => res(q && q.result);
+        tx.onerror = tx.onabort = () => rej(tx.error || new Error('IndexedDB'));
+    });
+}
+async function libInit() {
+    if (window.claude && typeof window.claude.use === 'function') {
+        try {
+            const [db, assets, user] = await Promise.all(['db', 'assets', 'user'].map(n => window.claude.use(n).catch(() => null)));
+            const uid = user && db && assets ? await user.id() : null;
+            if (uid) { LIB.col = db.collection('data/users/' + uid); LIB.assets = assets; LIB.mode = 'cloud'; return; }
+        } catch (e) { }
+    }
+    try { LIB.idb = await idbOpen(); LIB.mode = 'local'; } catch (e) { LIB.mode = 'none'; }
+}
+async function libList() {
+    if (LIB.mode === 'cloud') return (await LIB.col.get()).docs.map(d => ({ ...d.data(), id: d.id }));
+    if (LIB.mode === 'local') return await idbDo('items', 'readonly', s => s.getAll());
+    return [];
+}
+async function libPutItem(it) {
+    if (LIB.mode === 'cloud') { const { id, ...body } = it; await LIB.col.doc(id).set(body); }
+    else await idbDo('items', 'readwrite', s => s.put(it));
+}
+async function libDelItem(id) {
+    if (LIB.mode === 'cloud') await LIB.col.doc(id).delete();
+    else await idbDo('items', 'readwrite', s => s.delete(id));
+}
+async function libPutBlob(text) {
+    if (LIB.mode === 'cloud') return (await LIB.assets.upload(new Blob([text], { type: 'application/json' }), { type: 'application/json' })).id;
+    const key = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    await idbDo('blobs', 'readwrite', s => s.put(text, key));
+    return key;
+}
+async function libGetBlob(ref) {
+    if (LIB.mode === 'cloud') { const r = await fetch('/_blob/' + ref); if (!r.ok) throw new Error('HTTP ' + r.status); return await r.text(); }
+    const t = await idbDo('blobs', 'readonly', s => s.get(ref));
+    if (t == null) throw new Error(tr('archivo no encontrado'));
+    return t;
+}
+async function libDelBlob(ref) {
+    if (!ref) return;
+    try {
+        if (LIB.mode === 'cloud') await LIB.assets.delete(ref);
+        else await idbDo('blobs', 'readwrite', s => s.delete(ref));
+    } catch (e) { }
+}
+function libErr(e) { return (e && (e.code || e.message)) || 'error'; }
+
+// Estado actual, para saber si hay cambios sin guardar
+function libKey() { return histKey() + '|' + editsVer; }
+function libDirty() { return !!LIB.curId && (libKey() !== LIB.savedKey || curModel !== LIB.savedModel); }
+function libNote() {
+    if (LIB.restoring || LIB.mode === 'none' || !$('home') || !$('home').hidden) return;
+    libSaveUI();
+    clearTimeout(LIB.t);
+    if (!LIB.curId && !curModel && libKey() === LIB.savedKey) return;
+    // Guardado automático tras una pausa (en la cuenta, menos a menudo: cada guardado sube un archivo)
+    LIB.t = setTimeout(() => { if (!LIB.curId || libDirty()) libSave(true); }, LIB.mode === 'cloud' ? 12000 : 2500);
+}
+function libSaveUI() {
+    const b = $('btnSave'); if (!b) return;
+    const dirty = !LIB.curId || libDirty();
+    b.classList.toggle('dirty', dirty);
+    b.title = tr(dirty ? 'Hay cambios sin guardar' : 'Guardado');
+}
+
+// Miniatura: las lamas vistas de frente, más claras donde sobresalen
+function libThumb() {
+    const W = 240, H = 160, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'), id = g.createImageData(W, H), d = id.data;
+    const asp = p.width / p.height, pw = asp > W / H ? W - 12 : (H - 12) * asp, ph = asp > W / H ? (W - 12) / asp : H - 12;
+    const x0 = (W - pw) / 2, y0 = (H - ph) / 2, n = Math.max(1, p.slices), fill = clamp(p.thickness * n / p.width, 0.25, 1);
+    for (let i = 0; i < W * H; i++) { d[i * 4] = 46; d[i * 4 + 1] = 52; d[i * 4 + 2] = 48; d[i * 4 + 3] = 255; }
+    for (let x = 0; x < W; x++) {
+        const u = (x - x0) / pw; if (u < 0 || u >= 1) continue;
+        const k = Math.floor(u * n), f = u * n - k; if (f > fill) continue;
+        const uc = (k + 0.5) / n;
+        for (let y = 0; y < H; y++) {
+            const v = 1 - (y - y0) / ph; if (v < 0 || v > 1) continue;
+            let r = 0; try { r = reliefNorm(uc, v, p, imgP, edits); } catch (e) { }
+            const t = 0.35 + 0.65 * clamp(r, 0, 1), o = (y * W + x) * 4;
+            d[o] = 120 + 120 * t; d[o + 1] = 82 + 110 * t; d[o + 2] = 40 + 80 * t;
+        }
+    }
+    g.putImageData(id, 0, 0);
+    try { return c.toDataURL('image/jpeg', 0.82); } catch (e) { return ''; }
+}
+
+async function libSave(auto) {
+    if (LIB.mode === 'none') { if (!auto) toast(tr('No hay dónde guardar en este navegador.'), true); return false; }
+    if (LIB.saving) return LIB.saving;
+    clearTimeout(LIB.t);
+    LIB.saving = (async () => {
+        const key = libKey(), modelNow = curModel;
+        try {
+            const old = LIB.curId ? LIB.items.find(i => i.id === LIB.curId) : null;
+            const it = old ? { ...old } : { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created: Date.now(), name: modelNow ? modelNow.name.replace(/\.[^.]+$/, '') : tr('Proyecto {0}', fmtDate(Date.now())) };
+            let newModel = null;
+            if (modelNow && modelNow !== LIB.savedModel) {
+                const u8 = new Uint8Array(await modelNow.arrayBuffer());
+                newModel = await libPutBlob(JSON.stringify({ name: modelNow.name, type: modelNow.type || '', b64: u8ToB64(u8) }));
+            }
+            const j = JSON.parse(projectJSON());
+            if (modelNow) delete j.heightmap; // se rehace desde el modelo al abrir
+            const proj = await libPutBlob(JSON.stringify(j));
+            const oldProj = it.project, oldModel = it.model;
+            Object.assign(it, {
+                updated: Date.now(), project: proj, w: p.width, h: p.height, slices: p.slices, depth: p.depth,
+                modelName: modelNow ? modelNow.name : '', thumb: libThumb()
+            });
+            if (newModel) it.model = newModel; else if (!modelNow) it.model = null;
+            await libPutItem(it);
+            await libDelBlob(oldProj);
+            if (oldModel && oldModel !== it.model) await libDelBlob(oldModel);
+            LIB.items = [it, ...LIB.items.filter(i => i.id !== it.id)];
+            LIB.curId = it.id; LIB.savedKey = key; LIB.savedModel = modelNow;
+            try { localStorage.setItem('lamas-cnc-cur', it.id); } catch (e) { }
+            libSaveUI();
+            if (!auto) toast(tr('Guardado en «Mis modelos»: {0}', it.name));
+            return true;
+        } catch (e) {
+            toast(tr('No se pudo guardar: {0}', libErr(e)), true);
+            return false;
+        } finally { LIB.saving = null; }
+    })();
+    return LIB.saving;
+}
+
+// Proyecto vacío, conservando lo que es de la vista (colores, luz)
+function libResetProject() {
+    const old = p;
+    p = { ...DEFAULTS };
+    for (const k of VIEW_KEYS) if (k in old) p[k] = old[k];
+    img = null; stlMesh = null; imgSrc = null; curModel = null;
+    edits = null; editsVer++; undoStack.length = 0;
+    setImgStatus('', false); showAspectBtn(); syncForm();
+}
+function libResetHistory() { clearTimeout(hist.t); hist.undo.length = 0; hist.redo.length = 0; hist.cur = null; histCommit(); }
+function libStart(id) { LIB.curId = id; LIB.savedKey = id ? libKey() : ''; LIB.savedModel = id ? curModel : null; libResetHistory(); libSaveUI(); }
+
+async function libOpen(id) {
+    const it = LIB.items.find(i => i.id === id); if (!it) return;
+    homeBusy(tr('Abriendo «{0}»…', it.name));
+    LIB.restoring = true;
+    try {
+        const j = JSON.parse(await libGetBlob(it.project));
+        libResetProject();
+        if (it.model) {
+            const m = JSON.parse(await libGetBlob(it.model));
+            await loadImageFile(new File([b64ToU8(m.b64)], m.name, { type: m.type }));
+            p = { ...DEFAULTS, ...j.params };
+            edits = j.edits ? editsFromJSON(j.edits) : null; editsVer++;
+            syncForm();
+            if (stlMesh) rasterizeSTL(); else if (imgSrc) decodeImage();
+        } else loadProject(JSON.stringify(j), true);
+        regenerate();
+        libStart(it.id);
+        try { localStorage.setItem('lamas-cnc-cur', it.id); } catch (e) { }
+        showHome(false);
+    } catch (e) {
+        homeBusy(tr('No se pudo abrir «{0}»: {1}', it.name, libErr(e)), true);
+        return;
+    } finally { LIB.restoring = false; }
+    homeBusy('');
+}
+function libNew() {
+    libResetProject();
+    regenerate();
+    libStart(null);
+    try { localStorage.removeItem('lamas-cnc-cur'); } catch (e) { }
+    showHome(false);
+    setTab('diseno');
+}
+async function libAddModel(file) {
+    if (!file) return;
+    homeBusy(tr('Abriendo «{0}»…', file.name));
+    libResetProject();
+    libStart(null);
+    if (/\.json$/i.test(file.name)) loadProject(await file.text(), true);
+    else await loadImageFile(file);
+    if (!img && !stlMesh && !imgSrc && !/\.json$/i.test(file.name)) {
+        const st = $('imgStatus');
+        homeBusy(st && st.textContent ? st.textContent : tr('No se pudo abrir «{0}». Prueba con JPG, PNG o SVG.', file.name), true);
+        return;
+    }
+    regenerate();
+    homeBusy('');
+    showHome(false);
+    setTab('diseno');
+    const ok = await libSave(true);
+    if (ok) toast(tr('Modelo añadido a «Mis modelos»: {0}', LIB.items[0].name));
+}
+async function libRename(id, name) {
+    const it = LIB.items.find(i => i.id === id); if (!it || !name.trim() || name === it.name) return renderHome();
+    const prev = it.name; it.name = name.trim().slice(0, 80);
+    try { await libPutItem(it); } catch (e) { it.name = prev; toast(tr('No se pudo guardar: {0}', libErr(e)), true); }
+    renderHome();
+}
+async function libDelete(id) {
+    const it = LIB.items.find(i => i.id === id); if (!it) return;
+    try {
+        await libDelItem(id);
+        await libDelBlob(it.project); await libDelBlob(it.model);
+        LIB.items = LIB.items.filter(i => i.id !== id);
+        if (LIB.curId === id) { LIB.curId = null; LIB.savedKey = ''; LIB.savedModel = null; }
+        toast(tr('Eliminado: {0}', it.name));
+    } catch (e) { toast(tr('No se pudo eliminar: {0}', libErr(e)), true); }
+    renderHome();
+}
+
+// ---------- Pantalla de inicio ----------
+let homeInEditor = false;
+function homeBusy(t, bad) { const el = $('homeMsg'); if (!el) return; el.textContent = t; el.className = 'homemsg' + (bad ? ' bad' : ''); el.hidden = !t; }
+async function showHome(on) {
+    $('home').hidden = !on;
+    document.body.classList.toggle('homeopen', on);
+    if (!on) { homeInEditor = true; libSaveUI(); if (view === '3d') resize3d(); else drawSheet(); return; }
+    if (homeInEditor && libDirty()) await libSave(true);
+    $('homeBack').hidden = !homeInEditor;
+    homeBusy('');
+    renderHome();
+    try { LIB.items = (await libList()).sort((a, b) => (b.updated || 0) - (a.updated || 0)); }
+    catch (e) { homeBusy(tr('No se pudo leer «Mis modelos»: {0}', libErr(e)), true); }
+    renderHome();
+}
+function fmtDate(t) { try { return new Date(t).toLocaleDateString(I18N.lang === 'uk' ? 'uk-UA' : 'es-ES', { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return ''; } }
+function renderHome() {
+    const box = $('homeList');
+    $('homeStore').textContent = tr(LIB.mode === 'cloud' ? 'Se guardan en tu cuenta de Claude: solo tú los ves.' : LIB.mode === 'local' ? 'Se guardan en este navegador.' : 'Este navegador no permite guardar modelos.');
+    $('homeEmpty').hidden = LIB.items.length > 0;
+    box.innerHTML = LIB.items.map(it => `<article class="mcard${it.id === LIB.curId ? ' cur' : ''}" data-id="${esc(it.id)}">
+        <button type="button" class="mthumb" data-open="${esc(it.id)}" aria-label="${esc(tr('Abrir'))} ${esc(it.name)}">${it.thumb ? `<img src="${esc(it.thumb)}" alt="">` : ''}</button>
+        <div class="mbody">
+          <b class="mname">${esc(it.name)}</b>
+          <span class="mmeta">${fmt(it.w || 0)} × ${fmt(it.h || 0)} mm · ${esc(tr('{0} lamas', it.slices || 0))}${it.modelName ? ' · ' + esc(it.modelName) : ''}</span>
+          <span class="mmeta">${esc(fmtDate(it.updated || it.created))}</span>
+          <div class="mbtns">
+            <button type="button" class="btn small" data-open="${esc(it.id)}">${esc(tr('Abrir'))}</button>
+            <button type="button" class="btn ghost small" data-ren="${esc(it.id)}">${esc(tr('Renombrar'))}</button>
+            <button type="button" class="btn ghost small" data-del="${esc(it.id)}">${esc(tr('Eliminar'))}</button>
+          </div>
+        </div>
+      </article>`).join('');
+}
+function setupHome() {
+    $('homeNew').onclick = libNew;
+    $('homeBack').onclick = () => showHome(false);
+    $('homeFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; libAddModel(f); });
+    $('btnHome').onclick = () => showHome(true);
+    $('btnSave').onclick = () => libSave(false);
+    $('homeList').addEventListener('click', e => {
+        const o = e.target.closest('[data-open]'), r = e.target.closest('[data-ren]'), d = e.target.closest('[data-del]'), y = e.target.closest('[data-delyes]'), n = e.target.closest('[data-delno]');
+        if (o) return libOpen(o.dataset.open);
+        if (r) {
+            const card = r.closest('.mcard'), nm = card.querySelector('.mname'), it = LIB.items.find(i => i.id === r.dataset.ren);
+            const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'mrename'; inp.value = it.name; inp.maxLength = 80;
+            nm.replaceWith(inp); inp.focus(); inp.select();
+            let done = false;
+            const fin = ok => { if (done) return; done = true; ok ? libRename(it.id, inp.value) : renderHome(); };
+            inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') fin(true); if (ev.key === 'Escape') fin(false); });
+            inp.addEventListener('blur', () => fin(true));
+            return;
+        }
+        if (d) {
+            d.parentElement.innerHTML = `<span class="mask">${esc(tr('¿Eliminar este modelo?'))}</span><button type="button" class="btn small danger" data-delyes="${esc(d.dataset.del)}">${esc(tr('Sí, eliminar'))}</button><button type="button" class="btn ghost small" data-delno="1">${esc(tr('No'))}</button>`;
+            return;
+        }
+        if (y) return libDelete(y.dataset.delyes);
+        if (n) renderHome();
+    });
+    window.addEventListener('pagehide', () => { if (libDirty() && LIB.mode === 'local') libSave(true); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && libDirty()) libSave(true); });
+}
+
 // ---------- Arranque ----------
 function boot() {
     buildForm();
@@ -4641,6 +5025,8 @@ function boot() {
         if (sw) { p[sw.dataset.sw] = sw.dataset.v; syncForm(); onFieldChange(sw.dataset.sw); }
         if (chip) { p[chip.dataset.chip] = chip.dataset.v; $('f_' + chip.dataset.chip).value = chip.dataset.v; onFieldChange(chip.dataset.chip); }
     });
+    setupHome();
+    document.querySelectorAll('#homeLang button').forEach(b => b.addEventListener('click', () => { setLang(b.dataset.lang); renderHome(); }));
     $('hudUndo').onclick = () => histGo(-1);
     $('hudRedo').onclick = () => histGo(1);
     document.addEventListener('keydown', e => {
@@ -4661,6 +5047,7 @@ function boot() {
     new MutationObserver(reTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     setView('sheet');
     regenerate();
+    LIB.ready = libInit().then(() => showHome(true));
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { RASTERS.clear(); if (p.mode === 'opis') schedule(); });
 }
 boot();
