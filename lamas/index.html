@@ -1858,6 +1858,7 @@ function makeZip(files) { // files: [{name, data: Uint8Array}]
 
 // ================== INTERFAZ ==================
 const UK = {
+ "Proyecto guardado, pero el modelo «{0}» no cabe en el almacén ({1}): se guardó su relieve.": "Проєкт збережено, але модель «{0}» не вміщується у сховище ({1}): збережено її рельєф.",
  "Mis modelos": "Мої моделі",
  "Guardar": "Зберегти",
  "Abrir": "Відкрити",
@@ -4764,6 +4765,28 @@ async function libDelBlob(ref) {
         else await idbDo('blobs', 'readwrite', s => s.delete(ref));
     } catch (e) { }
 }
+// El modelo se guarda comprimido (gzip) y en trozos: cada archivo del almacén admite 20 MB
+const LIB_PART = 9 * 1024 * 1024; // bytes por trozo (en base64 ≈ 12 MB)
+async function pipeBytes(u8, stream) { return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(stream)).arrayBuffer()); }
+async function libPutModel(file) {
+    let u8 = new Uint8Array(await file.arrayBuffer()), gz = false;
+    if (typeof CompressionStream !== 'undefined') { try { const c = await pipeBytes(u8, new CompressionStream('gzip')); if (c.length < u8.length) { u8 = c; gz = true; } } catch (e) { } }
+    const n = Math.max(1, Math.ceil(u8.length / LIB_PART)), refs = [];
+    try {
+        for (let i = 0; i < n; i++)
+            refs.push(await libPutBlob(JSON.stringify({ name: file.name, type: file.type || '', gz, part: i, parts: n, b64: u8ToB64(u8.subarray(i * LIB_PART, (i + 1) * LIB_PART)) })));
+    } catch (e) { for (const r of refs) await libDelBlob(r); throw e; }
+    return refs;
+}
+async function libGetModel(refs) {
+    const parts = [];
+    let meta = null;
+    for (const r of [].concat(refs)) { const m = JSON.parse(await libGetBlob(r)); meta = meta || m; parts.push(b64ToU8(m.b64)); }
+    let u8 = new Uint8Array(parts.reduce((s, a) => s + a.length, 0)), o = 0;
+    for (const a of parts) { u8.set(a, o); o += a.length; }
+    if (meta.gz) u8 = await pipeBytes(u8, new DecompressionStream('gzip'));
+    return new File([u8], meta.name, { type: meta.type });
+}
 function libErr(e) { return (e && (e.code || e.message)) || 'error'; }
 
 // Estado actual, para saber si hay cambios sin guardar
@@ -4815,28 +4838,30 @@ async function libSave(auto) {
         try {
             const old = LIB.curId ? LIB.items.find(i => i.id === LIB.curId) : null;
             const it = old ? { ...old } : { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), created: Date.now(), name: modelNow ? modelNow.name.replace(/\.[^.]+$/, '') : tr('Proyecto {0}', fmtDate(Date.now())) };
-            let newModel = null;
+            let newModel = null, modelWarn = '';
             if (modelNow && modelNow !== LIB.savedModel) {
-                const u8 = new Uint8Array(await modelNow.arrayBuffer());
-                newModel = await libPutBlob(JSON.stringify({ name: modelNow.name, type: modelNow.type || '', b64: u8ToB64(u8) }));
+                try { newModel = await libPutModel(modelNow); }
+                catch (e) { modelWarn = libErr(e); } // el proyecto se guarda igual, con su mapa de alturas
             }
+            const modelRefs = newModel || (modelNow && modelNow === LIB.savedModel ? it.model : null);
             const j = JSON.parse(projectJSON());
-            if (modelNow) delete j.heightmap; // se rehace desde el modelo al abrir
+            if (modelRefs) delete j.heightmap; // se rehace desde el modelo al abrir
             const proj = await libPutBlob(JSON.stringify(j));
             const oldProj = it.project, oldModel = it.model;
             Object.assign(it, {
                 updated: Date.now(), project: proj, w: p.width, h: p.height, slices: p.slices, depth: p.depth,
                 modelName: modelNow ? modelNow.name : '', thumb: libThumb()
             });
-            if (newModel) it.model = newModel; else if (!modelNow) it.model = null;
+            it.model = modelRefs || null;
             await libPutItem(it);
             await libDelBlob(oldProj);
-            if (oldModel && oldModel !== it.model) await libDelBlob(oldModel);
+            if (oldModel && oldModel !== it.model) for (const r of [].concat(oldModel)) await libDelBlob(r);
             LIB.items = [it, ...LIB.items.filter(i => i.id !== it.id)];
             LIB.curId = it.id; LIB.savedKey = key; LIB.savedModel = modelNow;
             try { localStorage.setItem('lamas-cnc-cur', it.id); } catch (e) { }
             libSaveUI();
-            if (!auto) toast(tr('Guardado en «Mis modelos»: {0}', it.name));
+            if (modelWarn) toast(tr('Proyecto guardado, pero el modelo «{0}» no cabe en el almacén ({1}): se guardó su relieve.', modelNow.name, modelWarn), true);
+            else if (!auto) toast(tr('Guardado en «Mis modelos»: {0}', it.name));
             return true;
         } catch (e) {
             toast(tr('No se pudo guardar: {0}', libErr(e)), true);
@@ -4866,8 +4891,7 @@ async function libOpen(id) {
         const j = JSON.parse(await libGetBlob(it.project));
         libResetProject();
         if (it.model) {
-            const m = JSON.parse(await libGetBlob(it.model));
-            await loadImageFile(new File([b64ToU8(m.b64)], m.name, { type: m.type }));
+            await loadImageFile(await libGetModel(it.model));
             p = { ...DEFAULTS, ...j.params };
             edits = j.edits ? editsFromJSON(j.edits) : null; editsVer++;
             syncForm();
@@ -4920,7 +4944,8 @@ async function libDelete(id) {
     const it = LIB.items.find(i => i.id === id); if (!it) return;
     try {
         await libDelItem(id);
-        await libDelBlob(it.project); await libDelBlob(it.model);
+        await libDelBlob(it.project);
+        for (const r of [].concat(it.model || [])) await libDelBlob(r);
         LIB.items = LIB.items.filter(i => i.id !== id);
         if (LIB.curId === id) { LIB.curId = null; LIB.savedKey = ''; LIB.savedModel = null; }
         toast(tr('Eliminado: {0}', it.name));
